@@ -10,6 +10,7 @@ let classifier;
 let video;
 const myVoice = new p5.Speech();
 let data = {};
+let detectHits = 0;
 let stream_status = false;
 let is_quick = false;
 let is_sequential = false;
@@ -26,10 +27,11 @@ function setup() {
   video.position(50, 250);
 
   let buttonConfigs = [
-    { label: 'Button 1', handler: run_cam_1, posY: 425 },
+    //{ label: 'Button 1', handler: run_cam_1, posY: 425 },
+    { label: 'Log first 1000 detects and download log', handler: run_cam_3, posY: 450 },
     { label: '~ Tap into the spirit ~', handler: run_cam, posY: 475 },
     { label: '~ Sever Divine Connection ~', handler: stop_cam, posY: 500 },
-    { label: 'Oh divine mother, tell me what you see!', handler: saveDataToFile, posY: 525 }
+    //{ label: 'Oh divine mother, tell me what you see!', handler: saveDataToFile, posY: 525 }
   ];
 
   buttonConfigs.forEach((btn, index) => {
@@ -113,6 +115,13 @@ function saveDataToFile() {
   a.click();
   document.body.removeChild(a);
 }
+
+function get_detect_hits() {
+  const currentValue = Object.values(data).reduce((a, b) => a+b, 0);
+  detectHits = currentValue;
+  return detectHits;
+}
+
 function card_logger(card_val) {
   logged_cards.add(card_val);
   console.log('Detected card: ', card_val);
@@ -144,7 +153,9 @@ function gotResult(err, results = []) {
   }
 
   console.log('results type:', typeof results);
-
+  
+  console.log('Number of hits: ', get_detect_hits());
+  
   let hijack = '';
   if (results.length > 0) {
     hijack = hijacker(results);
@@ -185,13 +196,14 @@ function gotResult(err, results = []) {
     console.log('Logged cards:', value);
   });
 
-  if (is_quick && logged_cards.size === 100) {
+  if (is_quick && get_detect_hits() === 100) {
     select('#logged_cards').html(Array.from(logged_cards).slice(0, 101));
     stop_cam();
     return;
   }
-  if (is_sequential && logged_cards.size === 1000) {
+  if (is_sequential && get_detect_hits() === 1000) {
     select('#logged_cards').html(Array.from(logged_cards).slice(0, 1001));
+    saveDataToFile();
     stop_cam();
     return;
   }
@@ -206,6 +218,7 @@ function stop_cam() {
   is_sequential = false;
   logged_cards.clear();
   cards_list = [];
+  detectHits = 0;
   myVoice.speak('');
 }
 
